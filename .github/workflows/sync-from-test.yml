@@ -1,0 +1,50 @@
+name: Sync from TEST
+
+on:
+  workflow_dispatch: {}       # déclenchement manuel
+  schedule:
+    - cron: "0 6 * * *"       # (optionnel) tous les jours 06:00 UTC
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      # 1) Checkout PROD (dépôt courant)
+      - name: Checkout PROD
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # 2) Checkout TEST dans un sous-dossier, avec le PAT
+      - name: Checkout TEST
+        uses: actions/checkout@v4
+        with:
+          repository: <BlackStar1523>/<REPO_TEST>
+          token: ${{ secrets.SYNC_TOKEN }}
+          path: test-src
+
+      # 3) Copier le contenu de TEST vers PROD en excluant certains fichiers
+      - name: Sync files (rsync)
+        run: |
+          rsync -a --delete \
+            --exclude ".git" \
+            --exclude ".github/workflows" \
+            --exclude "assets/JS/config.js" \
+            test-src/ ./
+
+      # 4) Commit & push si changements
+        # (si rien n'a changé, il ne pousse rien)
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@users.noreply.github.com"
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git add -A
+            git commit -m "Sync from TEST (auto)"
+            git push origin HEAD:main
+          else
+            echo "No changes"
+          fi
