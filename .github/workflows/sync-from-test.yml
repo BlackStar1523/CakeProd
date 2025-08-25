@@ -1,10 +1,6 @@
 name: Sync from TEST
-
 on:
-  workflow_dispatch: {}        # lancement manuel
-  schedule:
-    - cron: "0 6 * * *"        # optionnel: 06:00 UTC chaque jour
-
+  workflow_dispatch: {}
 permissions:
   contents: write
 
@@ -12,21 +8,17 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      # 1) Checkout PROD (repo courant)
-      #    ⚠️ on NE met PAS persist-credentials:false pour garder GITHUB_TOKEN
       - name: Checkout PROD
         uses: actions/checkout@v4
 
-      # 2) Checkout TEST avec ton PAT (lecture)
       - name: Checkout TEST
         uses: actions/checkout@v4
         with:
           repository: BlackStar1523/CakeTest.github.io
-          token: ${{ secrets.SYNC_TEST }}
+          token: ${{ secrets.SYNC_TEST }}   # ou PUSH_TEST si c'est ton nom
           path: test-src
 
-      # 3) Diff rapide pour log
-      - name: Show diff (what will change)
+      - name: Dry-run diff
         run: |
           rsync -a --delete --dry-run \
             --exclude ".git" \
@@ -34,22 +26,19 @@ jobs:
             --exclude "assets/JS/config.js" \
             test-src/ ./
 
-      # 4) Sync fichiers de TEST -> PROD (en excluant ce qu'on veut garder)
       - name: Sync files (copy)
         run: |
-    set -e
-    rsync -a --delete \
-      --exclude ".git" \
-      --exclude ".github/workflows" \
-      --exclude "assets/JS/config.js" \
-      test-src/ ./ || code=$?
-    if [ "${code:-0}" = "24" ]; then
-      echo "rsync reported vanished files (code 24) — continuing"
-    elif [ "${code:-0}" != "0" ]; then
-      exit $code
-    fi
+          rsync -a --delete \
+            --exclude ".git" \
+            --exclude ".github/workflows" \
+            --exclude "assets/JS/config.js" \
+            test-src/ ./ || code=$?
+          if [ "${code:-0}" = "24" ]; then
+            echo "rsync reported vanished files (code 24) — continuing"
+          elif [ "${code:-0}" != "0" ]; then
+            exit $code
+          fi
 
-      # 5) Commit & push si changements
       - name: Commit & push
         run: |
           git status
