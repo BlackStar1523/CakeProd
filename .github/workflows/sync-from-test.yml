@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BlackStar1523/CakeTest.github.io
-          token: ${{ secrets.SYNC_TOKEN }}   # <- ton secret
+          token: ${{ secrets.SYNC_TEST }}   # <- ton secret
           ref: main                          # adapte si la branche défaut n'est pas main
           fetch-depth: 1
           path: test-src
