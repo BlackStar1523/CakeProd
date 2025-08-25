@@ -1,9 +1,9 @@
 name: Sync from TEST
 
 on:
-  workflow_dispatch: {}       # déclenchement manuel
+  workflow_dispatch: {}        # lancement manuel
   schedule:
-    - cron: "0 6 * * *"       # (optionnel) tous les jours 06:00 UTC
+    - cron: "0 6 * * *"        # optionnel: 06:00 UTC chaque jour
 
 permissions:
   contents: write
@@ -12,13 +12,12 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      # 1) Checkout PROD (dépôt courant)
+      # 1) Checkout PROD (repo courant)
+      #    ⚠️ on NE met PAS persist-credentials:false pour garder GITHUB_TOKEN
       - name: Checkout PROD
         uses: actions/checkout@v4
-        with:
-          persist-credentials: false
 
-      # 2) Checkout TEST dans un sous-dossier, avec le PAT
+      # 2) Checkout TEST avec ton PAT (lecture)
       - name: Checkout TEST
         uses: actions/checkout@v4
         with:
@@ -26,8 +25,17 @@ jobs:
           token: ${{ secrets.SYNC_TOKEN }}
           path: test-src
 
-      # 3) Copier le contenu de TEST vers PROD en excluant certains fichiers
-      - name: Sync files (rsync)
+      # 3) Diff rapide pour log
+      - name: Show diff (what will change)
+        run: |
+          rsync -a --delete --dry-run \
+            --exclude ".git" \
+            --exclude ".github/workflows" \
+            --exclude "assets/JS/config.js" \
+            test-src/ ./
+
+      # 4) Sync fichiers de TEST -> PROD (en excluant ce qu'on veut garder)
+      - name: Sync files (copy)
         run: |
           rsync -a --delete \
             --exclude ".git" \
@@ -35,16 +43,16 @@ jobs:
             --exclude "assets/JS/config.js" \
             test-src/ ./
 
-      # 4) Commit & push si changements
-        # (si rien n'a changé, il ne pousse rien)
+      # 5) Commit & push si changements
       - name: Commit & push
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@users.noreply.github.com"
+          git status
           if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions"
+            git config user.email "actions@users.noreply.github.com"
             git add -A
             git commit -m "Sync from TEST (auto)"
             git push origin HEAD:main
           else
-            echo "No changes"
+            echo "No changes to commit"
           fi
