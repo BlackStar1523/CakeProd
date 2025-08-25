@@ -1,76 +1,86 @@
 name: Sync from TEST
+
 on:
-  workflow_dispatch: {}
+  workflow_dispatch: {}   # lancement manuel uniquement
+
 permissions:
-  contents: write
+  contents: write         # nécessaire pour pousser sur CakeProd
 
 jobs:
   sync:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout PROD (target repo)
-        uses: actions/checkout@v4
+      # 1) Checkout PROD (repo courant)
+      - name: Checkout PROD
+        uses: actions/checkout@v4  # doc: https://github.com/actions/checkout
 
-      - name: Show current PROD root (before)
+      - name: Show PROD before
         run: |
-          echo "::group::ls -la (root PROD)"
+          echo "== ROOT PROD (before) =="
           ls -la
-          echo "::endgroup::"
-          echo "::group::.gitignore (if any)"
-          [ -f .gitignore ] && cat .gitignore || echo "(none)"
-          echo "::endgroup::"
 
-      - name: Checkout TEST (source repo)
+      # 2) Checkout TEST dans un sous-dossier
+      - name: Checkout TEST
         uses: actions/checkout@v4
         with:
           repository: BlackStar1523/CakeTest.github.io
-          token: ${{ secrets.SYNC_TEST }}   # <- ton secret
+          token: ${{ secrets.SYNC_TEST }}   # ton PAT classic repo
           ref: main                          # adapte si la branche défaut n'est pas main
           fetch-depth: 1
           path: test-src
 
-      - name: Show TEST tree (what we pulled)
+      - name: Show TEST tree
         run: |
-          echo "::group::ls -la test-src (top)"
+          echo "== ROOT TEST (pulled) =="
           ls -la test-src
-          echo "::endgroup::"
-          echo "::group::find test-src -maxdepth 2"
-          find test-src -maxdepth 2 -type f | sed 's#^#  #'
-          echo "::endgroup::"
+          echo "== Files (max depth 2) =="
+          find test-src -maxdepth 2 -type f -print
 
-      - name: Dry-run diff (what will be copied)
+      # 3) Sauvegarder les fichiers PROD à préserver
+      - name: Backup preserved files
         run: |
-          echo "::group::RSYNC DRY-RUN"
-          rsync -av --delete --dry-run \
-            --exclude ".git" \
-            --exclude ".github/workflows" \
-            --exclude "assets/JS/config.js" \
-            test-src/ ./
-          echo "::endgroup::"
+          mkdir -p preserve/.github/workflows
+          # à adapter si tu veux préserver d'autres fichiers
+          [ -f assets/JS/config.js ] && mkdir -p preserve/assets/JS && cp -a assets/JS/config.js preserve/assets/JS/config.js || true
+          [ -d .github/workflows ] && cp -a .github/workflows/. preserve/.github/workflows/ || true
+          [ -f CNAME ] && cp -a CNAME preserve/CNAME || true
+          [ -f robots.txt ] && cp -a robots.txt preserve/robots.txt || true
 
-      - name: Sync files (copy)
+      # 4) Vider la racine PROD (sans toucher au .git)
+      - name: Wipe PROD working tree (except .git)
         run: |
-          set -e
-          rsync -av --delete \
-            --exclude ".git" \
-            --exclude ".github/workflows" \
-            --exclude "assets/JS/config.js" \
-            test-src/ ./ || code=$?
-          # Tolérer 'vanished files' (24)
-          if [ "${code:-0}" = "24" ]; then
-            echo "rsync code 24 (vanished files) — ok, on continue."
-          elif [ "${code:-0}" != "0" ]; then
-            exit $code
-          fi
+          shopt -s dotglob nullglob
+          for p in * .*; do
+            case "$p" in
+              .|..|.git) continue ;;
+            esac
+            rm -rf -- "$p"
+          done
 
-      - name: Clean working folder (do not commit test-src)
-        run: rm -rf test-src
-
-      - name: Git status (what changed)
+      # 5) Copier le contenu de TEST -> racine PROD
+      - name: Copy TEST into PROD
         run: |
-          echo "::group::git status -s"
+          shopt -s dotglob
+          cp -a test-src/* ./ || true
+
+      # 6) Restaurer les fichiers préservés
+      - name: Restore preserved files
+        run: |
+          [ -f preserve/assets/JS/config.js ] && mkdir -p assets/JS && cp -a preserve/assets/JS/config.js assets/JS/config.js || true
+          [ -d preserve/.github/workflows ] && mkdir -p .github/workflows && cp -a preserve/.github/workflows/. .github/workflows/ || true
+          [ -f preserve/CNAME ] && cp -a preserve/CNAME CNAME || true
+          [ -f preserve/robots.txt ] && cp -a preserve/robots.txt robots.txt || true
+
+      # 7) Nettoyage du dossier de travail
+      - name: Clean work dirs
+        run: rm -rf test-src preserve
+
+      # 8) Vérif / Commit / Push
+      - name: Git status
+        run: |
+          echo "== git status =="
           git status -s
-          echo "::endgroup::"
 
       - name: Commit & push
         run: |
@@ -84,8 +94,7 @@ jobs:
             echo "No changes to commit"
           fi
 
-      - name: Show current PROD root (after)
+      - name: Show PROD after
         run: |
-          echo "::group::ls -la (root PROD after)"
+          echo "== ROOT PROD (after) =="
           ls -la
-          echo "::endgroup::"
