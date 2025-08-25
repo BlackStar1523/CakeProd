@@ -8,40 +8,72 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PROD
+      - name: Checkout PROD (target repo)
         uses: actions/checkout@v4
 
-      - name: Checkout TEST
+      - name: Show current PROD root (before)
+        run: |
+          echo "::group::ls -la (root PROD)"
+          ls -la
+          echo "::endgroup::"
+          echo "::group::.gitignore (if any)"
+          [ -f .gitignore ] && cat .gitignore || echo "(none)"
+          echo "::endgroup::"
+
+      - name: Checkout TEST (source repo)
         uses: actions/checkout@v4
         with:
           repository: BlackStar1523/CakeTest.github.io
-          token: ${{ secrets.SYNC_TEST }}   # ou PUSH_TEST si c'est ton nom
+          token: ${{ secrets.SYNC_TOKEN }}   # <- ton secret
+          ref: main                          # adapte si la branche défaut n'est pas main
+          fetch-depth: 1
           path: test-src
 
-      - name: Dry-run diff
+      - name: Show TEST tree (what we pulled)
         run: |
-          rsync -a --delete --dry-run \
+          echo "::group::ls -la test-src (top)"
+          ls -la test-src
+          echo "::endgroup::"
+          echo "::group::find test-src -maxdepth 2"
+          find test-src -maxdepth 2 -type f | sed 's#^#  #'
+          echo "::endgroup::"
+
+      - name: Dry-run diff (what will be copied)
+        run: |
+          echo "::group::RSYNC DRY-RUN"
+          rsync -av --delete --dry-run \
             --exclude ".git" \
             --exclude ".github/workflows" \
             --exclude "assets/JS/config.js" \
             test-src/ ./
+          echo "::endgroup::"
 
       - name: Sync files (copy)
         run: |
-          rsync -a --delete \
+          set -e
+          rsync -av --delete \
             --exclude ".git" \
             --exclude ".github/workflows" \
             --exclude "assets/JS/config.js" \
             test-src/ ./ || code=$?
+          # Tolérer 'vanished files' (24)
           if [ "${code:-0}" = "24" ]; then
-            echo "rsync reported vanished files (code 24) — continuing"
+            echo "rsync code 24 (vanished files) — ok, on continue."
           elif [ "${code:-0}" != "0" ]; then
             exit $code
           fi
 
+      - name: Clean working folder (do not commit test-src)
+        run: rm -rf test-src
+
+      - name: Git status (what changed)
+        run: |
+          echo "::group::git status -s"
+          git status -s
+          echo "::endgroup::"
+
       - name: Commit & push
         run: |
-          git status
           if [[ -n "$(git status --porcelain)" ]]; then
             git config user.name "github-actions"
             git config user.email "actions@users.noreply.github.com"
@@ -51,3 +83,9 @@ jobs:
           else
             echo "No changes to commit"
           fi
+
+      - name: Show current PROD root (after)
+        run: |
+          echo "::group::ls -la (root PROD after)"
+          ls -la
+          echo "::endgroup::"
