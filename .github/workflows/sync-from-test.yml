@@ -22,7 +22,7 @@ jobs:
       - name: Checkout TEST
         uses: actions/checkout@v4
         with:
-          repository: <BlackStar1523>/<REPO_TEST>
+          repository: BlackStar1523/CakeTest.github.io
           token: ${{ secrets.SYNC_TOKEN }}
           path: test-src
 
