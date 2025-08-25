@@ -37,11 +37,17 @@ jobs:
       # 4) Sync fichiers de TEST -> PROD (en excluant ce qu'on veut garder)
       - name: Sync files (copy)
         run: |
-          rsync -a --delete \
-            --exclude ".git" \
-            --exclude ".github/workflows" \
-            --exclude "assets/JS/config.js" \
-            test-src/ ./
+    set -e
+    rsync -a --delete \
+      --exclude ".git" \
+      --exclude ".github/workflows" \
+      --exclude "assets/JS/config.js" \
+      test-src/ ./ || code=$?
+    if [ "${code:-0}" = "24" ]; then
+      echo "rsync reported vanished files (code 24) — continuing"
+    elif [ "${code:-0}" != "0" ]; then
+      exit $code
+    fi
 
       # 5) Commit & push si changements
       - name: Commit & push
