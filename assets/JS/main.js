@@ -2,105 +2,50 @@
 <html lang="fr">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Dashboard gâteaux</title>
+<title>Feedback gâteau</title>
 <link rel="stylesheet" href="assets/CSS/style.css">
 <body>
-  <h1>Dashboard</h1> 
+  <form id="formFeedback">
+    <h1 id="cakeTitle">Gâteau</h1>
+    <img id="cakePhoto" alt="" style="max-width:100%;height:auto;border-radius:8px;margin:8px 0;">
 
-  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
-    <div>
-      <label for="cakeSelect">Gâteau</label><br>
-      <select id="cakeSelect" style="min-width:260px">
-        <option value="">— Sélectionner un gâteau —</option>
-      </select>
-    </div>
+    <h1>Donner son avis</h1>
 
-    <div>
-      <label for="searchCake">Filtrer</label><br>
-      <input id="searchCake" placeholder="Rechercher par titre">
-    </div>
+    <!-- Rempli automatiquement via ?cakeId=... si vide -->
+    <input id="cakeId" type="hidden">
 
-    <div>
-      <label>&nbsp;</label><br>
-      <button id="btnRefreshCakes" type="button">Rafraîchir la liste</button>
-    </div>
+    <label for="taster">Prénom (optionnel)</label>
+    <input id="taster" placeholder="Ex : Marie">
 
-    <div>
-      <label>&nbsp;</label><br>
-      <button id="btnLoad" type="button">Charger</button>
-    </div>
+    <label for="taste">Goût (/10)</label>
+    <input id="taste" type="number" min="0" max="10" step="0.5" required inputmode="decimal">
 
-    <div>
-      <label>&nbsp;</label><br>
-      <button id="btnExport" type="button">Export CSV</button>
-    </div>
-  </div>
+    <label for="texture">Texture (/10)</label>
+    <input id="texture" type="number" min="0" max="10" step="0.5" required inputmode="decimal">
 
-  <!-- Bloc Lien public -->
-  <div id="shareBox" style="display:none;margin-top:12px;background:#fff;padding:12px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,.05);">
-    <strong>Lien public :</strong>
-    <a id="publicLinkDash" href="#" target="_blank" rel="noopener"></a>
-    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-      <button type="button" id="btnCopyLink">Copier le lien</button>
-      <button type="button" id="btnWhatsApp">Partager WhatsApp</button>
-    </div>
-    <div id="qrDash" style="margin-top:8px;"></div>
-    <!-- Optionnel: si tu veux le QR
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    -->
-  </div>
+    <label for="pairing">Garniture (/10)</label>
+    <input id="pairing" type="number" min="0" max="10" step="0.5" required inputmode="decimal">
 
-  <h2>Statistiques</h2>
-  <p>Moyenne globale: <strong id="avgGlobal">-</strong></p>
-  <ul>
-    <li>Goût: <span id="avgTaste">-</span></li>
-    <li>Texture: <span id="avgTexture">-</span></li>
-    <li>Garniture: <span id="avgPairing">-</span></li>
-    <li>Visuel: <span id="avgVisuel">-</span></li>
-  </ul>
+    <label for="visuel">Visuel (/10)</label>
+    <input id="visuel" type="number" min="0" max="10" step="0.5" required inputmode="decimal">
 
-  <h2>Graphiques</h2>
-  <div style="background:#fff;padding:16px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,.05);">
-    <h3>Moyennes par critère (/10)</h3>
-    <canvas id="chartAverages" height="120"></canvas>
-  </div>
+    <label for="overall">Globale (/10, Calculée)</label>
+    <input id="overall" type="number" min="0" max="10" step="0.5" readonly disabled>
 
-  <div style="height:12px"></div>
+    <fieldset>
+      <legend>Observations</legend>
+      <label><input type="checkbox" name="flag" value="trop_sucre"> Trop sucré</label>
+      <label><input type="checkbox" name="flag" value="trop_sec"> Trop sec</label>
+      <label><input type="checkbox" name="flag" value="trop_dense"> Trop dense</label>
+    </fieldset>
 
-  <div style="background:#fff;padding:16px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,.05);">
-    <h3>Distribution des notes globales</h3>
-    <canvas id="chartHistogram" height="120"></canvas>
-  </div>
+    <label for="comments">Commentaire</label>
+    <textarea id="comments" placeholder="Optionnel"></textarea>
 
-  <div style="height:12px"></div>
+    <button type="submit">Envoyer</button>
+  </form>
 
-  <div style="background:#fff;padding:16px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,.05);">
-    <h3>Observations (flags)</h3>
-    <canvas id="chartFlags" height="120"></canvas>
-  </div>
-
-  <h2>Réponses</h2>
-  <table border="1" cellpadding="6">
-    <thead>
-      <tr>
-        <th>Testeur</th>
-        <th>Goût</th>
-        <th>Texture</th>
-        <th>Garniture</th>
-        <th>Visuel</th>
-        <th>Globale</th>
-        <th>Observations</th>
-        <th>Commentaire</th>
-        <th>Date</th>
-      </tr>
-    </thead>
-    <tbody id="responsesTbody"></tbody>
-  </table>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script src="assets/JS/config.js"></script>
+  <script src="assets/JS/config.js"></script>
 <script src="assets/JS/diagnostics.js"></script> <!-- optionnel ; s’active seulement si ENV === "TEST" -->
 <script src="assets/JS/main.js"></script>
 
