@@ -1,91 +1,108 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-
-  <details open>
-  <summary>Diagnostics</summary>
-  <pre id="diag" style="white-space:pre-wrap;background:#111;color:#0f0;padding:8px;border-radius:6px;overflow:auto;max-height:220px"></pre>
-</details>
-
-  <title>Ajouter un gâteau</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: sans-serif;
-      max-width: 600px;
-      margin: 20px auto;
-      padding: 10px;
-    }
-    form label {
-      display: block;
-      margin: 10px 0;
-    }
-    #preview {
-      max-width: 200px;
-      display: block;
-      margin: 8px 0;
-      border: 1px solid #ccc;
-      padding: 4px;
-    }
-    button {
-      padding: 8px 16px;
-      margin-top: 10px;
-    }
-    #publicLink {
-      word-break: break-all;
-      display: inline-block;
-      margin-top: 8px;
-    }
-  </style>
-</head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard gâteaux</title>
+<link rel="stylesheet" href="assets/CSS/style.css">
 <body>
-  <h1>Créer un nouveau gâteau</h1>
+  <h1>Dashboard</h1> 
 
-  <form id="formAddCake">
-    <label>
-      Titre :
-      <input id="title" required>
-    </label>
-    <label>
-      Date de réalisation :
-      <input id="dateReal" type="date" required>
-    </label>
-    <label>
-      Photo :
-      <input id="photo" type="file" accept="image/*" required>
-    </label>
-    <img id="preview" alt="Aperçu photo">
-    <button type="submit">Créer</button>
-  </form>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end;">
+    <div>
+      <label for="cakeSelect">Gâteau</label><br>
+      <select id="cakeSelect" style="min-width:260px">
+        <option value="">— Sélectionner un gâteau —</option>
+      </select>
+    </div>
 
-  <p>
-    Lien public : <a id="publicLink" target="_blank"></a>
-  </p>
+    <div>
+      <label for="searchCake">Filtrer</label><br>
+      <input id="searchCake" placeholder="Rechercher par titre">
+    </div>
 
-  <!-- ton JS principal -->
+    <div>
+      <label>&nbsp;</label><br>
+      <button id="btnRefreshCakes" type="button">Rafraîchir la liste</button>
+    </div>
+
+    <div>
+      <label>&nbsp;</label><br>
+      <button id="btnLoad" type="button">Charger</button>
+    </div>
+
+    <div>
+      <label>&nbsp;</label><br>
+      <button id="btnExport" type="button">Export CSV</button>
+    </div>
+  </div>
+
+  <!-- Bloc Lien public -->
+  <div id="shareBox" style="display:none;margin-top:12px;background:#fff;padding:12px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,.05);">
+    <strong>Lien public :</strong>
+    <a id="publicLinkDash" href="#" target="_blank" rel="noopener"></a>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" id="btnCopyLink">Copier le lien</button>
+      <button type="button" id="btnWhatsApp">Partager WhatsApp</button>
+    </div>
+    <div id="qrDash" style="margin-top:8px;"></div>
+    <!-- Optionnel: si tu veux le QR
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    -->
+  </div>
+
+  <h2>Statistiques</h2>
+  <p>Moyenne globale: <strong id="avgGlobal">-</strong></p>
+  <ul>
+    <li>Goût: <span id="avgTaste">-</span></li>
+    <li>Texture: <span id="avgTexture">-</span></li>
+    <li>Garniture: <span id="avgPairing">-</span></li>
+    <li>Visuel: <span id="avgVisuel">-</span></li>
+  </ul>
+
+  <h2>Graphiques</h2>
+  <div style="background:#fff;padding:16px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,.05);">
+    <h3>Moyennes par critère (/10)</h3>
+    <canvas id="chartAverages" height="120"></canvas>
+  </div>
+
+  <div style="height:12px"></div>
+
+  <div style="background:#fff;padding:16px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,.05);">
+    <h3>Distribution des notes globales</h3>
+    <canvas id="chartHistogram" height="120"></canvas>
+  </div>
+
+  <div style="height:12px"></div>
+
+  <div style="background:#fff;padding:16px;border-radius:6px;box-shadow:0 2px 4px rgba(0,0,0,.05);">
+    <h3>Observations (flags)</h3>
+    <canvas id="chartFlags" height="120"></canvas>
+  </div>
+
+  <h2>Réponses</h2>
+  <table border="1" cellpadding="6">
+    <thead>
+      <tr>
+        <th>Testeur</th>
+        <th>Goût</th>
+        <th>Texture</th>
+        <th>Garniture</th>
+        <th>Visuel</th>
+        <th>Globale</th>
+        <th>Observations</th>
+        <th>Commentaire</th>
+        <th>Date</th>
+      </tr>
+    </thead>
+    <tbody id="responsesTbody"></tbody>
+  </table>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script src="assets/JS/config.js"></script>
 <script src="assets/JS/diagnostics.js"></script> <!-- optionnel ; s’active seulement si ENV === "TEST" -->
 <script src="assets/JS/main.js"></script>
 
-
-
-  <!-- init spécifique pour cette page -->
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const f = document.querySelector("#formAddCake");
-      if (f) f.addEventListener("submit", handleAddCakeSubmit);
-
-      const input = document.querySelector("#photo");
-      const prev = document.querySelector("#preview");
-      if (input && prev) {
-        input.addEventListener("change", () => {
-          const file = input.files?.[0];
-          if (file) prev.src = URL.createObjectURL(file);
-        });
-      }
-    });
-  </script>
 </body>
 </html>
